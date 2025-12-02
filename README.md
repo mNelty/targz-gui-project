@@ -1,6 +1,6 @@
 ⚠️ Important note: This project is currently in development, some features might not work as expected. It's not recommended for normal use, as long as this warning is present. Unless you want to contribute or try new things, it's not recommended.
 
-# 📚 LibRARy: Linux Source Code Installation Automation 
+# 📚 LibRARy: Linux Source Code Installation Automation
 **(Meaning: Library of RAndom Repository "y")**
 ​LibRARy is a Graphical User Interface (GUI) application designed to automate, simplify, and secure the process of installing software from source code (.tar.gz files) on Linux distributions, especially for new users. Say goodbye to complex, manual terminal commands like ./configure, make, and hunting down dependencies!
 - ​The project is developed using Python and PyQt5.
@@ -43,7 +43,7 @@
 3. Launch the Application
 ​To start the main window:
 
-> python main_window.py
+> python run.py
 
 #### 🚀 How to Use
 - ​Launch: Start the application using the command above.
