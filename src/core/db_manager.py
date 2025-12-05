@@ -49,6 +49,28 @@ class DBManager:
         self.cursor.execute("SELECT path FROM installed_files WHERE package_id = ?", (package_id,))
         return [row[0] for row in self.cursor.fetchall()]
 
+    def get_all_packages(self):
+        """Retrieves all packages from the database."""
+        self.cursor.execute("SELECT name, version, install_date FROM packages")
+        return [{'name': row[0], 'version': row[1], 'install_date': row[2]}
+                for row in self.cursor.fetchall()]
+
+    def get_package_details(self, name):
+        """Retrievels full details for a package by name."""
+        self.cursor.execute("SELECT id, name, version, install_date FROM packages WHERE name=?", (name,))
+        package_row = self.cursor.fetchone()
+        if not package_row:
+            return None
+
+        package_id, name, version, install_date = package_row
+        files = self.get_files_for_package(package_id)
+        return {
+            'name': name,
+            'version': version,
+            'install_date': install_date,
+            'files': files
+        }
+
     def close(self):
         """Closes the database connection."""
         self.conn.close()
