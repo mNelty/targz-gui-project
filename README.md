@@ -1,13 +1,13 @@
 ⚠️ Important note: This project is currently in development, some features might not work as expected. It's not recommended for normal use, as long as this warning is present. Unless you want to contribute or try new things, it's not recommended.
 
-# 📚 LibRARy: Linux Source Code Installation Automation
-**(Meaning: Library of RAndom Repository "y")**
-​LibRARy is a Graphical User Interface (GUI) application designed to automate, simplify, and secure the process of installing software from source code (.tar.gz files) on Linux distributions, especially for new users. Say goodbye to complex, manual terminal commands like ./configure, make, and hunting down dependencies!
+# 📚 LibRARx: Linux Source Code Installation Automation
+**(Meaning: Library of RAndom Repository "x")**
+​LibRARx is a Graphical User Interface (GUI) application designed to automate, simplify, and secure the process of installing software from source code (.tar.gz files) on Linux distributions, especially for new users. Say goodbye to complex, manual terminal commands like ./configure, make, and hunting down dependencies!
 - ​The project is developed using Python and PyQt5.
 ### 🌟 Key Features
-​LibRARy tackles the three most challenging steps of source code installation within a single interface:
+​LibRARx tackles the three most challenging steps of source code installation within a single interface:
 
-​1. Smart Installation Automation (LibRARy Core)
+​1. Smart Installation Automation (LibRARx Core)
 ​Standard Detection: The application automatically detects the underlying installation standard (e.g., ./configure from Autotools, CMakeLists.txt, or setup.py) within the dropped .tar.gz file.
 ​Compilation Flow: It sequentially executes the commands appropriate for the detected standard (configure, make) without requiring manual intervention.
 ​Secure File Tracking (DESTDIR): It utilizes the DESTDIR environment variable to safely redirect the make install process to a temporary, isolated directory. This allows the system to accurately track and record the list of installed files without requiring root (sudo) permissions during the critical installation phase.
@@ -25,15 +25,15 @@
 ​File Registry: All file paths installed by a package (e.g., /usr/bin, /usr/local/lib, etc.) are meticulously recorded in a local SQLite database (~/.config/library/library.db).
 ​Future Uninstallation: This registry is the foundation for a future feature to completely and cleanly remove (uninstall) installed software from the system.
 ### ​🛠️ Setup and Running
-​Follow these steps to get LibRARy running on your system:
+​Follow these steps to get LibRARx running on your system:
 ​Prerequisites
 ​Python 3.x
 ​A Debian or Ubuntu-based Linux distribution (Dependency detection relies on the apt system).
 
 ​1. Clone the Repository
-> git clone [https://github.com/](https://github.com/mNelty/LibRARy.git)
+> git clone [https://github.com/](https://github.com/mNelty/targz-gui-projekt.git)
 
-> cd LibRARy
+> cd targz-gui-projekt
 
 2. Install Dependencies
 ​Install the necessary Python packages required for the application to run:
@@ -49,11 +49,11 @@
 - ​Launch: Start the application using the command above.
 - ​Drag-and-Drop: Drag and drop your desired .tar.gz file onto the main window.
 - ​Inspection (LibRARx): Review the files and scripts in the security dialog. Click "Proceed" to continue.
-- Automation: LibRARy will automatically begin the extraction, configuration, and compilation steps.
+- Automation: LibRARx will automatically begin the extraction, configuration, and compilation steps.
 - Interaction: When a dependency is missing, approve the installation command in the pop-up window.
 - Completion: The application will notify you when the installation is successfully completed.
 #### ​🤝 Contributing
-​LibRARy is an open-source project aimed at serving the Linux user community. We welcome bug reports, feature suggestions, and code contributions.
+​LibRARx is an open-source project aimed at serving the Linux user community. We welcome bug reports, feature suggestions, and code contributions.
 ​Open an Issue for bugs or suggestions.
 ​Develop new features or fixes on a separate branch.
 ​Submit a Pull Request to merge your changes into the main branch.

@@ -55,7 +55,7 @@ class Worker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('LibRARy - .tar.gz Installer')
+        self.setWindowTitle('LibRARx - .tar.gz Installer')
         self.setGeometry(100, 100, 800, 600)
 
         self.setAcceptDrops(True)
