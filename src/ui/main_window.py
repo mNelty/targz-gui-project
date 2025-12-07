@@ -32,28 +32,33 @@ class Worker(QThread):
         self.file_path = file_path
 
     def run(self):
-        installer = Installer(self.file_path, 
-                              log_callback=self.progress.emit, 
-                              db_manager=db_manager)
-        
-        extracted_path = installer.extract_package()
-        if not extracted_path:
-            self.finished.emit("Failed to extract package.")
-            return
-        
-        success, result = installer.run_installation()
-        
-        if success:
-            self.finished.emit("Installation completed successfully!")
-        else:
-            # Check if it's a dependency issue
-            if isinstance(result, dict) and result.get("type") == "dependency":
-                self.dependency_found.emit(result.get("package"))
-            else:
-                self.finished.emit(f"Installation failed: {result}")
+        local_db_manager = DBManager(APP_DB_PATH)
+        try:
+            installer = Installer(self.file_path, 
+                                  log_callback=self.progress.emit, 
+                                  db_manager=local_db_manager)
             
-        installer.cleanup()
-        self.progress.emit("Cleanup complete.")
+            extracted_path = installer.extract_package()
+            if not extracted_path:
+                self.finished.emit("Failed to extract package.")
+                return
+            
+            success, result = installer.run_installation()
+            
+            if success:
+                self.finished.emit("Installation completed successfully!")
+            else:
+                # Check if it's a dependency issue
+                if isinstance(result, dict) and result.get("type") == "dependency":
+                    self.dependency_found.emit(result.get("package"))
+                    self.finished.emit("Installation interrupted due to missing dependency.")
+                else:
+                    self.finished.emit(f"Installation failed: {result}")
+                
+            installer.cleanup()
+            self.progress.emit("Cleanup complete.")
+        finally:
+            local_db_manager.close()
 
 
 class MainWindow(QMainWindow):
@@ -145,10 +150,12 @@ class MainWindow(QMainWindow):
         self.history_list.clear()
         packages = db_manager.get_all_packages()
         for pkg in packages:
-            self.history_list.addItem(f"{pkg['name']} ({pkg['version']})")
+            item = QListWidgetItem(f"{pkg['name']} ({pkg['version']})")
+            item.setData(Qt.UserRole, pkg['name'])
+            self.history_list.addItem(item)
 
     def on_history_item_selected(self, item):
-        package_name = item.text().split(' ')[0]
+        package_name = item.data(Qt.UserRole) or item.text().split(' ')[0]
         details = db_manager.get_package_details(package_name)
         if details:
             details_text = (
@@ -193,6 +200,7 @@ class MainWindow(QMainWindow):
 
             item = QStandardItem(path_parts[-1])
             item.setData(member.name, Qt.UserRole)
+            item.setData(member.isdir(), Qt.UserRole + 1)
             item.setEditable(False)
             parent.appendRow(item)
 
@@ -201,12 +209,13 @@ class MainWindow(QMainWindow):
         member_name = item.data(Qt.UserRole)
 
         if member_name and self.current_archive_path:
-            is_dir = member_name.endswith('/')
+            is_dir = bool(item.data(Qt.UserRole + 1)) if item.data(Qt.UserRole + 1) is not None else member_name.endswith('/')
             if not is_dir:
                 content = Installer.read_file_from_archive(self.current_archive_path, member_name)
                 self.details_viewer.setText(content)
             else:
                 self.details_viewer.setText(f"--- Directory: {member_name} ---")
+
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls() and event.mimeData().urls()[0].toLocalFile().endswith('.tar.gz'):
@@ -247,10 +256,3 @@ class MainWindow(QMainWindow):
             self.update_log(f"User approved installation of '{package_name}'.")
         else:
             self.update_log("User declined to install the dependency. Installation aborted.")
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    main_win = MainWindow()
-    main_win.show()
-    sys.exit(app.exec_())

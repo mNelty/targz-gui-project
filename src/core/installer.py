@@ -31,13 +31,24 @@ class Installer:
                 # To handle nested directories correctly, find the root directory inside the tarball
                 members = tar.getmembers()
                 if members:
-                    # Often the content is inside a single root folder, e.g., package-1.0/
-                    root_folder = members[0].name.split('/')[0]
-                    self.extracted_path = os.path.join(self.temp_dir, root_folder)
+                    # Derive a common top-level folder if possible, else fall back to temp dir
+                    top_levels = set(m.name.split('/')[0] for m in members if m.name)
+                    if len(top_levels) == 1:
+                        root_folder = top_levels.pop()
+                        self.extracted_path = os.path.join(self.temp_dir, root_folder)
+                    else:
+                        self.extracted_path = self.temp_dir
                 else:
                     self.extracted_path = self.temp_dir
 
-                tar.extractall(path=self.temp_dir)
+                base_dir = os.path.realpath(self.temp_dir)
+                for member in members:
+                    member_path = os.path.realpath(os.path.join(base_dir, member.name))
+                    if not member_path.startswith(base_dir + os.sep):
+                        self._log(f"Skipping suspicious member outside target dir: {member.name}")
+                        continue
+                    tar.extract(member, path=base_dir)
+
                 self._log(f"Extraction successful to {self.extracted_path}")
                 return self.extracted_path
         except tarfile.TarError as e:
@@ -130,7 +141,7 @@ class Installer:
 
         self._log("\nBuild process completed successfully.")
 
-        # --- 2. Run Install Command with DESTDIR for tracking ---
+        # --- 2. Run Install Command with staging directory for tracking ---
         if not install_commands_only:
             self._log("No installation command found. Skipping file tracking.")
             return True, "Build successful (no install step)"
@@ -140,9 +151,14 @@ class Installer:
         self._log(f"Created staging directory for installation tracking: {staging_dir}")
 
         env = os.environ.copy()
-        env['DESTDIR'] = staging_dir
-        
-        self._log(f"\n--- Running install command: {' '.join(install_command)} with DESTDIR={staging_dir} ---")
+        if build_system == 'python':
+            install_command = install_command + ['--root', staging_dir]
+            log_dest = f"ROOT={staging_dir}"
+        else:
+            env['DESTDIR'] = staging_dir
+            log_dest = f"DESTDIR={staging_dir}"
+
+        self._log(f"\n--- Running install command: {' '.join(install_command)} with {log_dest} ---")
         
         process = subprocess.Popen(install_command, cwd=self.extracted_path, env=env,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
@@ -166,7 +182,8 @@ class Installer:
                 full_path = os.path.join(root, file)
                 # Get the relative path from the staging dir to represent the final path
                 relative_path = os.path.relpath(full_path, staging_dir)
-                installed_files.append('/' + relative_path)
+                posix_path = '/' + relative_path.replace('\\', '/')
+                installed_files.append(posix_path)
 
         self._log(f"Tracked {len(installed_files)} installed files:")
         for file in installed_files:
