@@ -2,6 +2,7 @@
 import tarfile
 import tempfile
 import os
+import sys
 import subprocess
 import re
 import shutil
@@ -20,8 +21,9 @@ class Installer:
 
     def extract_package(self):
         """Extracts the .tar.gz file to a temporary directory."""
-        if not self.file_path.endswith('.tar.gz'):
-            raise ValueError("Invalid file type. Only .tar.gz is supported.")
+        lower_path = self.file_path.lower()
+        if not (lower_path.endswith('.tar.gz') or lower_path.endswith('.tgz')):
+            raise ValueError("Invalid file type. Only .tar.gz or .tgz is supported.")
         
         self.temp_dir = tempfile.mkdtemp(prefix="library_")
         self._log(f"Extracting {self.file_path} to {self.temp_dir}")
@@ -107,7 +109,7 @@ class Installer:
         commands = {
             'autotools': [['./configure'], ['make'], ['make', 'install']],
             'cmake': [['cmake', '.'], ['make'], ['make', 'install']],
-            'python': [['python3', 'setup.py', 'install']], # Note: setup.py install often needs --prefix
+            'python': [[sys.executable, 'setup.py', 'install']], # Note: setup.py install often needs --prefix
             'make': [['make'], ['make', 'install']]
         }
         
@@ -160,10 +162,15 @@ class Installer:
 
         self._log(f"\n--- Running install command: {' '.join(install_command)} with {log_dest} ---")
         
-        process = subprocess.Popen(install_command, cwd=self.extracted_path, env=env,
-                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                                   text=True, bufsize=1)
-        
+        try:
+            process = subprocess.Popen(install_command, cwd=self.extracted_path, env=env,
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                       text=True, bufsize=1)
+        except FileNotFoundError:
+            self._log(f"Error: Command '{install_command[0]}' not found. Is it in your PATH?")
+            shutil.rmtree(staging_dir)
+            return False, f"Command not found: {install_command[0]}"
+
         for line in iter(process.stdout.readline, ''):
             self._log(line.strip())
         
@@ -241,6 +248,8 @@ class Installer:
             with tarfile.open(archive_path, 'r:gz') as tar:
                 member = tar.getmember(member_name)
                 if member.isfile():
+                    if member.size > 512 * 1024:
+                        return "--- File too large to preview ---"
                     with tar.extractfile(member) as f:
                         return f.read().decode('utf-8', errors='ignore')
                 return "--- Not a text file or directory ---"

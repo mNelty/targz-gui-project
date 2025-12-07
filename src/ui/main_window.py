@@ -3,7 +3,7 @@ import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QStackedWidget, QSplitter, QLabel,
-                             QTextEdit, QListWidget, QTreeView, QMessageBox,
+                             QTextEdit, QListWidget, QListWidgetItem, QTreeView, QMessageBox,
                              QPushButton)
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
@@ -151,12 +151,18 @@ class MainWindow(QMainWindow):
         packages = db_manager.get_all_packages()
         for pkg in packages:
             item = QListWidgetItem(f"{pkg['name']} ({pkg['version']})")
-            item.setData(Qt.UserRole, pkg['name'])
+            item.setData(Qt.UserRole, pkg['id'])
+            item.setData(Qt.UserRole + 1, pkg['name'])
             self.history_list.addItem(item)
 
     def on_history_item_selected(self, item):
-        package_name = item.data(Qt.UserRole) or item.text().split(' ')[0]
-        details = db_manager.get_package_details(package_name)
+        package_id = item.data(Qt.UserRole)
+        details = None
+        if package_id is not None:
+            details = db_manager.get_package_details_by_id(package_id)
+        if not details:
+            package_name = item.data(Qt.UserRole + 1) or item.text().split(' ')[0]
+            details = db_manager.get_package_details(package_name)
         if details:
             details_text = (
                 f"Name: {details['name']}\n"
@@ -204,6 +210,8 @@ class MainWindow(QMainWindow):
             item.setEditable(False)
             parent.appendRow(item)
 
+        self.contents_tree.expandAll()
+
     def on_contents_item_clicked(self, index):
         item = self.contents_model.itemFromIndex(index)
         member_name = item.data(Qt.UserRole)
@@ -218,18 +226,24 @@ class MainWindow(QMainWindow):
 
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls() and event.mimeData().urls()[0].toLocalFile().endswith('.tar.gz'):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+        if event.mimeData().hasUrls():
+            file_path = event.mimeData().urls()[0].toLocalFile()
+            if file_path.lower().endswith(('.tar.gz', '.tgz')):
+                event.acceptProposedAction()
+                return
+        event.ignore()
 
     def dropEvent(self, event):
         file_path = event.mimeData().urls()[0].toLocalFile()
+        if not file_path.lower().endswith(('.tar.gz', '.tgz')):
+            self.update_log("Unsupported file type. Please drop a .tar.gz or .tgz archive.")
+            return
         self.show_contents_view(file_path)
 
     def start_installation(self):
         if self.current_archive_path:
             self.log_viewer.clear()
+            self.proceed_button.setEnabled(False)
             self.worker = Worker(self.current_archive_path)
             self.worker.progress.connect(self.update_log)
             self.worker.finished.connect(self.on_installation_finished)
@@ -240,9 +254,16 @@ class MainWindow(QMainWindow):
 
     def update_log(self, message):
         self.log_viewer.append(message)
+        max_lines = 1000
+        lines = self.log_viewer.toPlainText().splitlines()
+        if len(lines) > max_lines:
+            self.log_viewer.setPlainText("\n".join(lines[-max_lines:]))
 
     def on_installation_finished(self, message):
         self.log_viewer.append(f"\n--- FINISHED ---\n{message}")
+        if "completed successfully" in message:
+            self.populate_history_list()
+        self.proceed_button.setEnabled(True)
 
     def handle_dependency_issue(self, package_name):
         self.update_log(f"Dependency issue: A required package '{package_name}' seems to be missing.")

@@ -51,13 +51,29 @@ class DBManager:
 
     def get_all_packages(self):
         """Retrieves all packages from the database."""
-        self.cursor.execute("SELECT name, version, install_date FROM packages")
-        return [{'name': row[0], 'version': row[1], 'install_date': row[2]}
+        self.cursor.execute("SELECT id, name, version, install_date FROM packages")
+        return [{'id': row[0], 'name': row[1], 'version': row[2], 'install_date': row[3]}
                 for row in self.cursor.fetchall()]
 
     def get_package_details(self, name):
-        """Retrievels full details for a package by name."""
+        """Retrieves full details for a package by name."""
         self.cursor.execute("SELECT id, name, version, install_date FROM packages WHERE name=?", (name,))
+        package_row = self.cursor.fetchone()
+        if not package_row:
+            return None
+
+        package_id, name, version, install_date = package_row
+        files = self.get_files_for_package(package_id)
+        return {
+            'name': name,
+            'version': version,
+            'install_date': install_date,
+            'files': files
+        }
+
+    def get_package_details_by_id(self, package_id):
+        """Retrieves full details for a package by id."""
+        self.cursor.execute("SELECT id, name, version, install_date FROM packages WHERE id=?", (package_id,))
         package_row = self.cursor.fetchone()
         if not package_row:
             return None
