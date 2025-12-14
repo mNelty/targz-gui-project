@@ -31,9 +31,9 @@
 ​A Debian or Ubuntu-based Linux distribution (Dependency detection relies on the apt system).
 
 ​1. Clone the Repository
-> git clone [https://github.com/](https://github.com/mNelty/targz-gui-projekt.git)
+> git clone [https://github.com/](https://github.com/mNelty/targz-gui-project.git)
 
-> cd targz-gui-projekt
+> cd targz-gui-project
 
 2. Install Dependencies
 ​Install the necessary Python packages required for the application to run:
